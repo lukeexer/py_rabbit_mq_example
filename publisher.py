@@ -84,7 +84,7 @@ class SPublisher():
             if RABBIT_MQ_PUBLISHER_CHANNEL is None:
                 raise pika.exceptions.AMQPChannelError
 
-            exchange_name = target_queue + '.direct'
+            exchange_name = 'direct.all'
             queue_name = target_queue
             RABBIT_MQ_PUBLISHER_CHANNEL.exchange_declare(
                 exchange=exchange_name,
@@ -96,11 +96,11 @@ class SPublisher():
             RABBIT_MQ_PUBLISHER_CHANNEL.queue_bind(
                 queue=queue_name,
                 exchange=exchange_name,
-                routing_key=exchange_name)
+                routing_key=queue_name)
 
             RABBIT_MQ_PUBLISHER_CHANNEL.basic_publish(
                 exchange=exchange_name,
-                routing_key=exchange_name,
+                routing_key=queue_name,
                 body=message_body)
         except (
             pika.exceptions.ConnectionClosedByBroker,
@@ -118,7 +118,7 @@ class SPublisher():
         print('Direct message sent.')
 
     @staticmethod
-    def pub_fanout(target_queue, message_body):
+    def pub_fanout(target_exchange, message_body):
         '''Publish message into fanout type queue.'''
 
         global RABBIT_MQ_PUBLISHER_CONNECTION
@@ -131,18 +131,13 @@ class SPublisher():
             if RABBIT_MQ_PUBLISHER_CHANNEL is None:
                 raise pika.exceptions.AMQPChannelError
 
-            exchange_name = target_queue + '.fanout'
-            queue_name = target_queue
+            exchange_name = target_exchange
             RABBIT_MQ_PUBLISHER_CHANNEL.exchange_declare(
                 exchange=exchange_name,
                 exchange_type='fanout',
                 passive=False,
                 durable=False,
                 auto_delete=False)
-            RABBIT_MQ_PUBLISHER_CHANNEL.queue_declare(queue=queue_name, durable=False)
-            RABBIT_MQ_PUBLISHER_CHANNEL.queue_bind(
-                queue=queue_name,
-                exchange=exchange_name)
 
             RABBIT_MQ_PUBLISHER_CHANNEL.basic_publish(
                 exchange=exchange_name,
@@ -166,12 +161,19 @@ class SPublisher():
 if __name__ == '__main__':
     SPublisher.init('user', 'user')
 
-    SPublisher.pub_direct('hello', 'Hello La.')
-    SPublisher.pub_direct('hello', 'Hello Lai.')
-    SPublisher.pub_direct('hello', 'Hello Laii.')
-    SPublisher.pub_direct('hello', 'Hello Laiii.')
+    # Direct publish only need to publish message to a specified target queue.
+    SPublisher.pub_direct('hello.1', 'Hello1 La.')
+    SPublisher.pub_direct('hello.1', 'Hello1 Lai.')
+    SPublisher.pub_direct('hello.1', 'Hello1 Laii.')
+    SPublisher.pub_direct('hello.1', 'Hello1 Laiii.')
 
-    SPublisher.pub_fanout('hello', 'Hello.fanout La.')
-    SPublisher.pub_fanout('hello', 'Hello.fanout Lai.')
-    SPublisher.pub_fanout('hello', 'Hello.fanout Laii.')
-    SPublisher.pub_fanout('hello', 'Hello.fanout Laiii.')
+    SPublisher.pub_direct('hello.2', 'Hello2 La.')
+    SPublisher.pub_direct('hello.2', 'Hello2 Lai.')
+    SPublisher.pub_direct('hello.2', 'Hello2 Laii.')
+    SPublisher.pub_direct('hello.2', 'Hello2 Laiii.')
+
+    # Fanout publish only need to publish message to a specified target exchange.
+    SPublisher.pub_fanout('fanout.all', 'Hello.fanout La.')
+    SPublisher.pub_fanout('fanout.all', 'Hello.fanout Lai.')
+    SPublisher.pub_fanout('fanout.all', 'Hello.fanout Laii.')
+    SPublisher.pub_fanout('fanout.all', 'Hello.fanout Laiii.')
