@@ -33,6 +33,9 @@ class SSubscriber():
     @retry(pika.exceptions.AMQPConnectionError,
         tries=RABBIT_MQ_CONNECTION_RETRY_TIMES,
         delay=RABBIT_MQ_CONNECTION_RETRY_DELAY)
+    @retry(pika.exceptions.ChannelWrongStateError,
+        tries=RABBIT_MQ_CONNECTION_RETRY_TIMES,
+        delay=RABBIT_MQ_CONNECTION_RETRY_DELAY)
     def init(
         source_queue,
         callback_function,
@@ -66,6 +69,12 @@ class SSubscriber():
             RABBIT_MQ_SUBSCRIBER_CHANNEL.queue_declare(queue=source_queue, durable=False)
 
             if source_fanout_exchange is not None:
+                RABBIT_MQ_SUBSCRIBER_CHANNEL.exchange_declare(
+                    exchange=source_fanout_exchange,
+                    exchange_type='fanout',
+                    passive=False,
+                    durable=False,
+                    auto_delete=False)
                 RABBIT_MQ_SUBSCRIBER_CHANNEL.queue_bind(
                     queue=source_queue,
                     exchange=source_fanout_exchange)
@@ -81,11 +90,11 @@ class SSubscriber():
         except (
             pika.exceptions.ConnectionClosedByBroker,
             pika.exceptions.AMQPChannelError,
-            pika.exceptions.AMQPConnectionError):
+            pika.exceptions.AMQPConnectionError,
+            pika.exceptions.ChannelWrongStateError):
 
             print('init function throws exception.')
 
-            RABBIT_MQ_SUBSCRIBER_CONNECTION.close()
             RABBIT_MQ_SUBSCRIBER_CHANNEL = None
             RABBIT_MQ_SUBSCRIBER_CONNECTION = None
 
@@ -125,7 +134,7 @@ def customized_callback_function(channel, method, properties, body):
 if __name__ == '__main__':
     try:
         SSubscriber.init(
-            'hello.1',
+            'hello.2',
             customized_callback_function,
             'user',
             'user',
