@@ -9,6 +9,8 @@ import pika
 from retry import retry
 
 RABBIT_MQ_HOST = 'localhost'
+RABBIT_MQ_ACCOUNT = None
+RABBIT_MQ_PASSWORD = None
 RABBIT_MQ_CONNECTION_RETRY_TIMES = -1
 RABBIT_MQ_CONNECTION_RETRY_DELAY = 1
 
@@ -31,14 +33,18 @@ class SSubscriber():
     @retry(pika.exceptions.AMQPConnectionError,
         tries=RABBIT_MQ_CONNECTION_RETRY_TIMES,
         delay=RABBIT_MQ_CONNECTION_RETRY_DELAY)
-    def init(source_queue, callback_function, host='localhost'):
+    def init(source_queue, callback_function, account, password, host='localhost'):
         '''Initialize Rabbit MQ subscriber.'''
 
         global RABBIT_MQ_HOST
+        global RABBIT_MQ_ACCOUNT
+        global RABBIT_MQ_PASSWORD
         global RABBIT_MQ_SUBSCRIBER_CONNECTION
         global RABBIT_MQ_SUBSCRIBER_CHANNEL
 
         RABBIT_MQ_HOST = host
+        RABBIT_MQ_ACCOUNT = account
+        RABBIT_MQ_PASSWORD = password
 
         if RABBIT_MQ_SUBSCRIBER_CONNECTION is None:
             SSubscriber.connect()
@@ -88,7 +94,8 @@ class SSubscriber():
         global RABBIT_MQ_SUBSCRIBER_CONNECTION
         global RABBIT_MQ_SUBSCRIBER_CHANNEL
 
-        param = (pika.ConnectionParameters(host=RABBIT_MQ_HOST))
+        credentials = pika.PlainCredentials(RABBIT_MQ_ACCOUNT, RABBIT_MQ_PASSWORD)
+        param = pika.ConnectionParameters(host=RABBIT_MQ_HOST, credentials=credentials)
         RABBIT_MQ_SUBSCRIBER_CONNECTION = pika.BlockingConnection(param)
         RABBIT_MQ_SUBSCRIBER_CHANNEL = RABBIT_MQ_SUBSCRIBER_CONNECTION.channel()
 
@@ -102,7 +109,7 @@ def customized_callback_function(channel, method, properties, body):
 
 if __name__ == '__main__':
     try:
-        SSubscriber.init('hello', customized_callback_function)
+        SSubscriber.init('hello', customized_callback_function, 'user', 'user')
     except KeyboardInterrupt:
         print('Interrupted')
         try:

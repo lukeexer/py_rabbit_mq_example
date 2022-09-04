@@ -6,6 +6,8 @@ import pika
 from retry import retry
 
 RABBIT_MQ_HOST = 'localhost'
+RABBIT_MQ_ACCOUNT = None
+RABBIT_MQ_PASSWORD = None
 RABBIT_MQ_CONNECTION_RETRY_TIMES = -1
 RABBIT_MQ_CONNECTION_RETRY_DELAY = 1
 
@@ -16,12 +18,16 @@ class SPublisher():
     '''Slibrary publisher library.'''
 
     @staticmethod
-    def init(host='localhost'):
+    def init(account, password, host='localhost'):
         '''Initialize Rabbit MQ library.'''
 
         global RABBIT_MQ_HOST
+        global RABBIT_MQ_ACCOUNT
+        global RABBIT_MQ_PASSWORD
 
         RABBIT_MQ_HOST = host
+        RABBIT_MQ_ACCOUNT = account
+        RABBIT_MQ_PASSWORD = password
 
     @staticmethod
     @retry(pika.exceptions.ConnectionClosedByBroker,
@@ -38,11 +44,14 @@ class SPublisher():
 
         print('Connect to Rabbit MQ server...')
 
+        global RABBIT_MQ_ACCOUNT
+        global RABBIT_MQ_PASSWORD
         global RABBIT_MQ_PUBLISHER_CONNECTION
         global RABBIT_MQ_PUBLISHER_CHANNEL
 
         if RABBIT_MQ_PUBLISHER_CONNECTION is None:
-            param = (pika.ConnectionParameters(host=RABBIT_MQ_HOST))
+            credentials = pika.PlainCredentials(RABBIT_MQ_ACCOUNT, RABBIT_MQ_PASSWORD)
+            param = pika.ConnectionParameters(host=RABBIT_MQ_HOST, credentials=credentials)
             RABBIT_MQ_PUBLISHER_CONNECTION = pika.BlockingConnection(param)
 
         if RABBIT_MQ_PUBLISHER_CHANNEL is None:
@@ -155,7 +164,7 @@ class SPublisher():
         print('Fanout message sent.')
 
 if __name__ == '__main__':
-    SPublisher.init()
+    SPublisher.init('user', 'user')
 
     SPublisher.pub_direct('hello', 'Hello La.')
     SPublisher.pub_direct('hello', 'Hello Lai.')
